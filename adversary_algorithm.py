@@ -69,7 +69,7 @@ def adversary_deletion(source_txt,cat_candidates_list):
     return og_classification,adv_classification
 
 def adversary_replacement(source_txt, master_list, triplet_list):
-    source_txt_og = source_text.split(" ") #split source text into list for easy manipulation
+    source_txt_og = source_txt.split(" ") #split source text into list for easy manipulation
     adv_txt_list = [] # make a copy for mutation    
     all_cats = ['privacy-contact-information', 'third_party_sharing_collection','user_choice_control','introductory_generic','data_security','first_party_collection_use','international_and_specific_audiences','policy_change','do_not_track','user_access_edit_and_deletion','practice_not_covered','data_retention']
     src_cats = return_category(source_text)
