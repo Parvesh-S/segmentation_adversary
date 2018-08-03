@@ -1,0 +1,185 @@
+import adversary_analysis
+from adversary_preprocessing import segment_dataset
+import nltk
+from nltk.tokenize import word_tokenize
+import fastText
+import math
+from accuracy_check import return_category
+'''
+Behavior...
+
+I: list of candidate words for a given piece of text (both rarely occurring words that
+are heavily tied to a certain category and words with a medium-high tf-idf score
+
+In-Between: 
+-Use candidate words as a starting point for adversarial replacements; chain as many together
+as necessary in order to move all classification scores above .7 to at/below .7. 
+-Generate sequences that are tied to a different category that keeps the category the same
+
+O: Morphed Text that fools classifier
+
+Need: call functions from adversary_analysis that find strong word candidates 
+      nltk word tokenization
+      FastText word embeddings
+      
+'''
+
+'''
+Eliminate other categories for substitution based on the
+categories that the given piece of text has a score of 
+over .7 in. 
+'''
+#Note: cat_candidates_list should be sorted in descending order
+#from most to least likely to cause a category change before being
+#passed into adversary()
+#Other_cat_candidates_list is a list of words/phrases that are heavily
+#tied to other
+
+
+'''
+#TODO:
+Search vec file for each word's vector and then find which word that
+happens to be heavily associated with another category has 
+a similar vector score. If this doesn't work, then choose vectors
+that are further and further away until a change occurs.
+'''
+
+
+
+def adversary_deletion(source_txt,cat_candidates_list):
+    source_txt_og = source_txt.split(" ") #split source text into list for easy manipulation
+    adv_source_txt_list = [] # make a copy for mutatation
+    og_classification = return_category(source_txt)    
+
+    for i in source_txt_og:
+        if i in cat_candidates_list:
+            adv_source_txt_list.append("")
+        else:
+            adv_source_txt_list.append(i)
+    
+    adv_text = ' '.join(adv_source_txt_list)
+    adv_classification = return_category(adv_text)
+    print("Source Text...")
+    print(source_txt)
+    print("============")
+    print("Adversarial Text...")
+    print(adv_text)
+    print("============")
+    
+    return og_classification,adv_classification
+
+def adversary_replacement(source_txt, master_list, triplet_list):
+    source_txt_og = source_text.split(" ") #split source text into list for easy manipulation
+    adv_txt_list = [] # make a copy for mutation    
+    all_cats = ['privacy-contact-information', 'third_party_sharing_collection','user_choice_control','introductory_generic','data_security','first_party_collection_use','international_and_specific_audiences','policy_change','do_not_track','user_access_edit_and_deletion','practice_not_covered','data_retention']
+    src_cats = return_category(source_text)
+
+    og_classification = 0
+    for i in range(len(all_cats)):
+        if all_cats[i] ==  src_cats[0]:
+            og_classification = i
+
+    og_list = segment_dataset(triplet_list, og_classification)
+    og_counts_dict = adversary_analysis.word_category_counts(og_list)
+    og_probs = adversary_analysis.word_category_probs(total_counts_dict, og_counts_dict, all_cats[category_index])
+    og_tfidf = adversary_analysis.tf_idf(og_list)
+    og_candidates = get_candidates(all_cats[category_index], adv_probs, adv_tfidf) 
+        
+    list_to_try = []
+    for i in range(len(all_cats)):
+        if all_cats[i] not in src_cats[0]:
+            list_to_try.append(i)
+
+            
+    cats_not_in_src_txt =  ""
+    adv_classification_list = []
+    for i in range(len(cat_candidates_list)**2):
+        for word in cat_candidates_list:
+            for category_index in list_to_try:
+                adv_list = segment_dataset(triplet_list, category_index)
+                adv_counts_dict = adversary_analysis.word_category_counts(adv_list)
+                adv_probs = adversary_analysis.word_category_probs(total_counts_dict, adv_counts_dict, all_cats[category_index])
+                adv_tfidf = adversary_analysis.tf_idf(adv_list)
+                adv_candidates = get_candidates(all_cats[category_index], adv_probs, adv_tfidf) 
+                adv_replacement = find_similar_vec("opp115.vec", adv_candidates, word)
+                for token in source_text_og:
+                    if token == word:
+                        adv_txt_list.append(adv_replacement)
+                    else:
+                        adv_txt_list.append(token)
+    
+        adv_text = ' '.join(adv_txt_list)
+        adv_classification = return_category(adv_text)
+        adv_classification_list.append((og_classification, adv_classification))
+        print("Original Classification" + og_classification)
+        print("-------------------------")
+        print("Adversarial Classification" + adv_classification)
+        print("=========================")            
+
+
+        '''most_similar = "" # most_similar word/phrase tied to another cat
+            adv_txt = [most_similar if src_wrd == word else src_wrd for src_wrd in word_tokenized(source_txt)]
+                
+            for instance in source_text:
+                #search 
+                adversary_text = ""
+        '''
+
+    return adv_classification_list
+
+#pass in vec file and a category other than those of over .7 that the src txt has
+#and try to use those candidates to find a word and associated vector score
+#that is close to that of the word we are looking to substitute
+def find_similar_vec(vec_file,segment_candidates,wrd_to_replace):
+    word_vec_scores = []
+    src_wrd_tuple = ()
+    with open(vec_file,"r") as vec:
+        for line in vec:
+            #print(line)
+            line_list = line.split(' ')
+            print(line_list)
+            if line_list[0] in segment_candidates:
+                tmp_tuple = (line_list[0], line_list[1:])
+                word_vec_scores.append(tmp_tuple)
+            if line_list[0] == wrd_to_replace:
+                src_wrd_tuple = (wrd_to_replace, line_list[1:])
+    vec.close()    
+    
+    #Now do similarity scores to wrd_to_replace
+    sim_score = 0.0    
+    word_score_pairs = []
+    src_vec_score = src_wrd_tuple[1]    
+    for item in word_vec_scores:
+        sim_score_diff = []
+        for i in range(len(item[1])-1):
+            print("Source Vector Score: " + src_vec_score[i])
+            #temp_diff = abs(float(src_vec_score[i]) - i)
+            #sim_score_diff.append(temp_diff)
+        word_score_pairs.append((item[0], sim_score_diff))
+    
+    final_diffs = []
+    for iteritem in word_score_pairs:
+        count = 0
+        for score_diff in iteritem[1]:
+            count += float(score_diff)
+        final_diffs.append((iteritem[0], count))
+    
+    final_diffs.sort(key=lambda tup: tup[1])
+    return final_diffs[0][0]
+
+def main():
+    
+    
+    '''
+    segment_candidates = ["data", "security", "personal", "sharing", "transfer", "adult", "person"]
+    word_to_replace = "child"
+    print(find_similar_vec("opp115.vec", segment_candidates, word_to_replace))
+    '''
+    text = "We use traffic log cookies to identify which pages are being used. This helps us analyse data about web page traffic and improve our website in order to tailor it to customer needs. We only use this information for statistical analysis purposes and then the data is removed from the system. Overall, cookies help us provide you with a better website, by enabling us to monitor which pages you find useful and which you do not. A cookie in no way gives us access to your computer or any information about you, other than the data you choose to share with us. You can choose to accept or decline cookies. Most web browsers automatically accept cookies, but you can usually modify your browser setting to decline cookies if you prefer. This may prevent you from taking full advantage of the website.Our website may contain links to other websites of interest. However, once you have used these links to leave our site, you should note that we do not have any control over that other website."
+    
+    for item in adversary_analysis.fpcu_list:
+        print(adversary_replacement(item, adversary_analysis.fpcu_options[1],adversary_analysis.dataset_list))
+    
+    #print(adversary_analysis.fpcu_options)
+    
+main()
